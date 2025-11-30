@@ -28,6 +28,8 @@ router.get(
         category_id,
         subcategory_id,
         location,
+        province,
+        district,
         min_price,
         max_price,
         condition,
@@ -39,10 +41,21 @@ router.get(
         limit = 20,
       } = req.query;
 
+      // Extract attr_* parameters for dynamic attribute filtering
+      const attributes = {};
+      Object.keys(req.query).forEach((key) => {
+        if (key.startsWith("attr_")) {
+          const attrName = key.replace("attr_", "");
+          attributes[attrName] = req.query[key];
+        }
+      });
+
       const filters = {
         category_id: category_id ? parseInt(category_id) : undefined,
         subcategory_id: subcategory_id ? parseInt(subcategory_id) : undefined,
         location,
+        province,
+        district,
         min_price: min_price ? parseFloat(min_price) : undefined,
         max_price: max_price ? parseFloat(max_price) : undefined,
         condition,
@@ -50,6 +63,7 @@ router.get(
         featured: featured === "true",
         urgent: urgent === "true",
         sort_by,
+        attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
       };
 
       const result = await Ad.getAll(filters, parseInt(page), parseInt(limit));

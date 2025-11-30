@@ -106,6 +106,7 @@ export class Ad {
       featured,
       urgent,
       sort_by = "newest",
+      attributes,
     } = filters;
     const offset = (page - 1) * limit;
     const conditions = [];
@@ -185,6 +186,44 @@ export class Ad {
 
     if (urgent) {
       conditions.push(`a.is_urgent = true AND a.urgent_until > NOW()`);
+    }
+
+    // Handle dynamic attribute filtering
+    if (attributes && Object.keys(attributes).length > 0) {
+      const attrEntries = Object.entries(attributes);
+      for (const [attrName, attrValue] of attrEntries) {
+        if (attrValue) {
+          // Get the filter value (handle single value or first of array)
+          const filterValue = Array.isArray(attrValue) ? attrValue[0] : attrValue;
+          
+          // Join with ad_attributes and category_attributes to filter by attribute name and value
+          // Values are stored as JSON strings via JSON.stringify(), so we compare:
+          // 1. Direct match: aa.value = '"filterValue"' (string stored with quotes)
+          // 2. Raw match: aa.value = 'filterValue' (number/boolean stored without quotes)
+          // 3. Array contains: check if JSONB array contains the value as string or element
+          conditions.push(`
+            a.id IN (
+              SELECT aa.ad_id 
+              FROM ad_attributes aa
+              JOIN category_attributes ca ON aa.attribute_id = ca.id
+              WHERE ca.field_name = $${paramCount} 
+              AND (
+                aa.value = $${paramCount + 1}
+                OR aa.value = $${paramCount + 2}
+                OR aa.value LIKE $${paramCount + 3}
+              )
+            )
+          `);
+          // Params: attrName, JSON.stringify(filterValue), filterValue, array pattern match
+          params.push(
+            attrName, 
+            JSON.stringify(filterValue), 
+            filterValue,
+            `%"${filterValue}"%`
+          );
+          paramCount += 4;
+        }
+      }
     }
 
     // Build ORDER BY clause

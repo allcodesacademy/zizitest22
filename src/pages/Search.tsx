@@ -340,7 +340,19 @@ const Search = () => {
                 <span>Filters</span>
               </button>
               <button
-                onClick={() => setShowSaveModal(true)}
+                onClick={() => {
+                  // Pre-populate search name with current search query or a descriptive name
+                  const generateSearchName = () => {
+                    const parts: string[] = [];
+                    if (filters.q) parts.push(filters.q);
+                    const categoryName = getSelectedCategoryName();
+                    if (categoryName) parts.push(categoryName);
+                    if (filters.province) parts.push(filters.district || filters.province);
+                    return parts.length > 0 ? parts.join(" - ") : "My Search";
+                  };
+                  setSearchName(generateSearchName());
+                  setShowSaveModal(true);
+                }}
                 className="flex items-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 data-testid="button-save-search"
               >
